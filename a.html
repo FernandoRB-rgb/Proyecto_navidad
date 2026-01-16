@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mini RDR2 Avanzado - Infinito</title>
+<style>
+  body { margin:0; overflow:hidden; background:#87CEEB; font-family:sans-serif; }
+  canvas { display:block; margin:auto; background:#87CEEB; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const mapWidth = 2000;
+const mapHeight = 1600;
+
+// --------------------
+// Jugador
+// --------------------
+const player = {
+    x: 400,
+    y: 300,
+    width: 48,
+    height: 48,
+    speed: 5,
+    health: 100,
+    color: 'brown',
+    dirX: 0,
+    dirY: -1 // predeterminado hacia arriba
+};
+
+// --------------------
+// Enemigos
+// --------------------
+const enemies = [];
+
+// Generar enemigos iniciales
+for(let i=0;i<5;i++){
+    spawnEnemy();
+}
+
+// --------------------
+// Obstáculos
+// --------------------
+const obstacles = [];
+for(let i=0;i<15;i++){
+    obstacles.push({
+        x: Math.random()*mapWidth,
+        y: Math.random()*mapHeight,
+        width: 60,
+        height: 80,
+        color: 'darkgreen'
+    });
+}
+
+// --------------------
+// Balas
+// --------------------
+let bullets = [];
+
+// --------------------
+// Controles
+// --------------------
+const keys = {};
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+// --------------------
+// Función disparar según dirección
+// --------------------
+document.addEventListener('keydown', e=>{
+    if(e.key===' '){
+        // normalizar dirección
+        let dx = player.dirX;
+        let dy = player.dirY;
+        if(dx===0 && dy===0) dy=-1; // si no se mueve, dispara hacia arriba
+        const mag = Math.sqrt(dx*dx + dy*dy);
+        dx/=mag; dy/=mag;
+        bullets.push({
+            x: player.x + player.width/2 -5,
+            y: player.y + player.height/2 -5,
+            width: 10,
+            height: 10,
+            speed: 10,
+            dx: dx,
+            dy: dy,
+            color: 'black'
+        });
+    }
+});
+
+// --------------------
+// Mover jugador
+// --------------------
+function movePlayer(){
+    let dx=0, dy=0;
+    if(keys['ArrowUp']) dy -= player.speed;
+    if(keys['ArrowDown']) dy += player.speed;
+    if(keys['ArrowLeft']) dx -= player.speed;
+    if(keys['ArrowRight']) dx += player.speed;
+
+    player.x += dx;
+    player.y += dy;
+
+    // Actualizar dirección de disparo
+    if(dx!==0 || dy!==0){
+        const mag = Math.sqrt(dx*dx + dy*dy);
+        player.dirX = dx/mag;
+        player.dirY = dy/mag;
+    }
+
+    // Limites del mapa
+    player.x = Math.max(0, Math.min(mapWidth - player.width, player.x));
+    player.y = Math.max(0, Math.min(mapHeight - player.height, player.y));
+}
+
+// --------------------
+// Mover enemigos
+// --------------------
+function moveEnemies(){
+    enemies.forEach(en=>{
+        en.x += en.speed*en.dirX;
+        en.y += en.speed*en.dirY;
+
+        // Cambiar dirección si choca con límites
+        if(en.x<0 || en.x>mapWidth - en.width) en.dirX *= -1;
+        if(en.y<0 || en.y>mapHeight - en.height) en.dirY *= -1;
+
+        // Perseguir jugador si está cerca
+        const dx = player.x - en.x;
+        const dy = player.y - en.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist<250){
+            const mag = Math.sqrt(dx*dx + dy*dy);
+            en.dirX = dx/mag;
+            en.dirY = dy/mag;
+        }
+
+        // Colisión con jugador
+        if(player.x<en.x+en.width && player.x+player.width>en.x &&
+           player.y<en.y+en.height && player.y+player.height>en.y){
+               player.health -= 0.5;
+        }
+    });
+}
+
+// --------------------
+// Actualizar balas
+// --------------------
+function updateBullets(){
+    bullets.forEach((b,i)=>{
+        b.x += b.dx*b.speed;
+        b.y += b.dy*b.speed;
+
+        // Colisión con enemigos
+        enemies.forEach((en,j)=>{
+            if(b.x<en.x+en.width && b.x+b.width>en.x &&
+               b.y<en.y+en.height && b.y+b.height>en.y){
+                en.health -= 25;
+                bullets.splice(i,1);
+                if(en.health<=0) enemies.splice(j,1);
+            }
+        });
+
+        // Fuera del mapa
+        if(b.x<0 || b.x>mapWidth || b.y<0 || b.y>mapHeight) bullets.splice(i,1);
+    });
+}
+
+// --------------------
+// Dibujar mundo con scroll
+// --------------------
+function draw(){
+    const camX = Math.min(Math.max(player.x - canvas.width/2, 0), mapWidth - canvas.width);
+    const camY = Math.min(Math.max(player.y - canvas.height/2, 0), mapHeight - canvas.height);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Fondo
+    ctx.fillStyle = '#228B22';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Obstáculos
+    obstacles.forEach(o=>{
+        ctx.fillStyle = o.color;
+        ctx.fillRect(o.x-camX, o.y-camY, o.width, o.height);
+    });
+
+    // Jugador
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x-camX, player.y-camY, player.width, player.height);
+
+    // Enemigos
+    enemies.forEach(en=>{
+        ctx.fillStyle = en.color;
+        ctx.fillRect(en.x-camX, en.y-camY, en.width, en.height);
+    });
+
+    // Balas
+    bullets.forEach(b=>{
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x-camX, b.y-camY, b.width, b.height);
+    });
+
+    // HUD
+    ctx.fillStyle = 'white';
+    ctx.fillText(`Vida: ${Math.floor(player.health)}`, 10, 20);
+    ctx.fillText(`Enemigos: ${enemies.length}`, 10, 40);
+}
+
+// --------------------
+// Generar enemigos infinitos
+// --------------------
+function spawnEnemy(){
+    enemies.push({
+        x: Math.random()*mapWidth,
+        y: Math.random()*mapHeight,
+        width:48,
+        height:48,
+        speed:2,
+        dirX: Math.random()<0.5?-1:1,
+        dirY: Math.random()<0.5?-1:1,
+        health:50,
+        color:'red'
+    });
+}
+
+// Cada 2 segundos aparece un nuevo enemigo
+setInterval(()=>{
+    if(player.health>0) spawnEnemy();
+},2000);
+
+// --------------------
+// Bucle principal
+// --------------------
+function gameLoop(){
+    if(player.health>0){
+        movePlayer();
+        moveEnemies();
+        updateBullets();
+        draw();
+        requestAnimationFrame(gameLoop);
+    } else {
+        ctx.fillStyle='black';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='red';
+        ctx.font='40px sans-serif';
+        ctx.fillText('¡Has muerto!', canvas.width/2 -120, canvas.height/2);
+    }
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>
+

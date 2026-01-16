@@ -1,0 +1,118 @@
+
+    let table = document.getElementById('classificationTables');
+    let shareButton = document.getElementById('groupPopup');
+
+    function changeClassificationTable ( type, value = '-' ) {
+        let typeItem = table.getAttribute('data-type');
+        let roundValue = 0;
+
+        switch ( type ) {
+            case 'rounds':
+                roundValue = value;
+                table.setAttribute('data-round', value);
+                break;
+            case 'competitions':
+                value = value.split('-');
+                table.setAttribute('data-competition', value[0]);
+                table.setAttribute('data-year', value[1]);
+                table.setAttribute('data-group', value[2]);
+                table.setAttribute('data-round', value[3]);
+                roundValue = value[3] ?? 0;
+                break;
+            case 'team':
+                value = value.split('-');
+                table.setAttribute('data-competition', value[0]);
+                table.setAttribute('data-year', value[1]);
+                table.setAttribute('data-group', value[2]);
+                table.setAttribute('data-round', value[3]);
+                roundValue = value[3] ?? 0;
+                break;
+            case 'seasons':
+                value = value.split('-');
+                table.setAttribute('data-year', value[0]);
+                table.setAttribute('data-group', value[1]);
+                table.setAttribute('data-round', value[2]);
+                roundValue = value[2] ?? 0;
+                break;
+        }
+
+        let competitionIdValue = table.getAttribute('data-competition');
+        let yearValue = table.getAttribute('data-year');
+        let groupValue = table.getAttribute('data-group');
+
+        let params = {
+            type: typeItem,
+            itemId: table.getAttribute('data-item'),
+            competitionId: competitionIdValue,
+            year: yearValue,
+            group: groupValue,
+            round: roundValue
+        };
+
+        renewTable( params )
+            .then( response => {
+                if ( !response.ok ) {
+                    throw new Error('Error fetching items');
+                }
+                return response.json();
+            } )
+            .then( ( data ) => {
+                if ( data['table'] ) {
+                    document.getElementById('classificationTables').innerHTML = data['table'];
+                }
+                if ( data['roundSelectors'] ) {
+                    changeRoundSelectors( data['roundSelectors'] );
+                }
+                if ( data['seasonsSelectors'] && type === 'competitions' ) {
+                    generateSeasons( data['seasonsSelectors'] );
+                }
+                if ( typeItem === 'competition' && data['newTitle'] ) {
+                    document.getElementById('titleTable').innerText = data['newTitle'];
+                }
+                if ( data['popup'] ) {
+                    document.getElementById('mod_shareGroupPopup').innerHTML = data['popup'];
+                }
+                roundValue.length > 0 ? document.getElementsByClassName('share-media')[0].setAttribute('data-round', roundValue) : '';
+                groupValue.length > 0 ? document.getElementsByClassName('share-media')[0].setAttribute('data-group', groupValue) : '';
+                yearValue.length > 0 ? document.getElementsByClassName('share-media')[0].setAttribute('data-year', yearValue) : '';
+                tabs();
+            } )
+
+    }
+    async function renewTable ( params ) {
+
+        return await fetch( '/ajax/reloadTable' + '?' + new URLSearchParams(params), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        } );
+
+    }
+
+    function changeRoundSelectors ( roundsSelectors ) {
+        let selectors = document.getElementsByClassName('selectorRound');
+
+        Array.from(selectors).forEach( e => {
+            e.innerHTML = roundsSelectors;
+        } );
+    }
+
+    function generateSeasons ( seasons ) {
+        let selectRounds = document.getElementById('seasons');
+        selectRounds.innerHTML = '';
+
+        Array.from(seasons).forEach( e => {
+            let option = document.createElement('option');
+            option.text = e['title'];
+            option.value = e['year'] + '-' + e['group'] + '-' + e['max_rounds'];
+            selectRounds.add( option );
+        } );
+    }
+
+    function changeAvgColumns(toShow, toHide) {
+        let show = document.getElementById(toShow);
+        let hide = document.getElementById(toHide);
+        show.classList.remove('hidden');
+        hide.classList.add('hidden');
+    }

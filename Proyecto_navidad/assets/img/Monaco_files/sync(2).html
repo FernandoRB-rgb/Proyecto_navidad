@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- saved from url=(0859)https://cookie.stpd.cloud/sync?bidders=%5B%22adform%22%2C%22adkernel%22%2C%22adtelligent%22%2C%22amx%22%2C%22criteo%22%2C%22medianet%22%2C%22nextMillennium%22%2C%22onetag%22%2C%22openx%22%2C%22pubmatic%22%2C%22smartadserver%22%2C%22sovrn%22%5D&gdpr=1&gdpr_consent=CQeHvsAQeHvsAAKA9AESCOFsAP_gAEPgAAiQL7NR_G__bWlr-bb3aftkeYxP9_hr7sQxBgbJk24FzLvW7JwXx2E5NAzatqIKmRIAu3TBIQNlHJDURVCgKIgFryDMaEyUoTNKJ6BkiFMZI2tYCFxvm4tjWQCY4vr99lc1mB-N7dr82dzyy6hHn3a5_2S1UJCdIYetDfv8ZBKT-9IEd_x8v4v4_EbpE2-eS1n_pGvp4j9-YnM_dBmxt-TSff7Pn__rl_e7X_vc_n3zv94XH77v_-__f_-7___2b_-_8F7AATDQqIIyyIEAgUDCCBAAoKwgAoEAQAAJA0QEAJgwIcgYALrCZACAFAAMEAIAAQYAAgAAEgAQiACgAgEAIEAgUAAYAEAQEADAwABgAsRAIAAQHQMUwIIBAsAEjMqg0wJQAEggJbKhBKBgQVwhCLPAIIERMFAAACAAUAAAA8FgISSAlYkEAXEE0AABAAAFECJAikLMAQVBmi0FYEnAZGmAYPmCZJToMgCYISMgyITfhMPFIUQIIcgNilmAOniCgAAA.IAAA.fmAAAAAAAAAA&usp_consent=&type=iframe -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+      const cookieUrl = 'https://prebid.setupad.io/cookie_sync';
+      const bidders = JSON.parse(
+        parseQueryParam('bidders', window.location.search)
+      );
+      const gdpr = parseInt(parseQueryParam('gdpr', window.location.search));
+      const gdpr_consent = parseQueryParam(
+        'gdpr_consent',
+        window.location.search
+      );
+      const usp_consent = parseQueryParam(
+        'usp_consent',
+        window.location.search
+      );
+
+      try {
+        const payload = {
+          bidders,
+          gdpr,
+          gdpr_consent,
+        };
+
+        x = new window.XMLHttpRequest();
+
+        x.onreadystatechange = function () {
+          if (this.readyState == 4 && this.status == 200) {
+            const response = JSON.parse(this.response);
+            response.bidder_status.map((bid) => {
+              if (bid.usersync.type === 'iframe') {
+                createTag('iframe', bid.usersync.url);
+              }
+              if (bid.usersync.type === 'redirect') {
+                createTag('img', bid.usersync.url);
+              }
+            });
+          }
+        };
+
+        x.open('POST', cookieUrl);
+        // IE needs timeout to be set after open
+        x.timeout = 3000;
+        x.setRequestHeader('Content-Type', 'text/plain');
+        x.withCredentials = true;
+        x.send(JSON.stringify(payload));
+      } catch (err) {
+        console.error(err);
+      }
+
+      function parseQueryParam(param, url) {
+        var regex = new RegExp('[\\?&]' + param + '=([^&#]*)');
+        var results = regex.exec(url);
+        return results === null
+          ? ''
+          : decodeURIComponent(results[1].replace(/\+/g, ' '));
+      }
+
+      function createTag(type, url) {
+        const tag = document.createElement(type);
+        tag.setAttribute('src', url);
+        document.body.appendChild(tag);
+      }
+    </script>
+  </head>
+  <body marginwidth="0" marginheight="0">
+
+<iframe src="./sync.html"></iframe><iframe src="./checksync.html"></iframe><iframe src="./cm.html"></iframe><iframe src="./user_sync(1).html"></iframe><iframe src="./saved_resource(16).html"></iframe><img src="./cookie"><iframe src="./iframe.html"></iframe><iframe src="./saved_resource(17).html"></iframe></body></html>

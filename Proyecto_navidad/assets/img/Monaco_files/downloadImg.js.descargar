@@ -1,0 +1,92 @@
+//Descarga infografía clasificación
+$('#downloadImage').on('click', function () {
+    var img = $('#infImage').attr('src');
+    var img_name = $('#infImage').data('name');
+    download(img, img_name+'.png', 'image/png');
+})
+
+$('.share-link.clipboard').on('click', function () {
+    var href = document.querySelector('.share-link.clipboard').getAttribute('data-href');
+
+    var inputTemp = document.createElement('input');
+    inputTemp.value = href;
+
+    document.body.appendChild(inputTemp);
+
+    inputTemp.select();
+    inputTemp.setSelectionRange(0, 99999); // Para dispositivos móviles
+
+    document.execCommand('copy');
+    document.body.removeChild(inputTemp);
+})
+window.addEventListener('load', function() {
+    if (window.location.href.includes('popup')) {
+        const urlParams = new URLSearchParams(window.location.search);
+        var popup = urlParams.get('popup').length > 0 ? urlParams.get('popup') - 1 : 0;
+        var element = $('a.openInfograph').eq(popup);
+        openInfograph(element.length > 0 ? element[0] : element);
+    }
+})
+
+function openInfograph(item) {
+    const table = document.getElementById('classificationTables');
+    const activeTab = document.querySelector('.tab.active > a').getAttribute('data-type');
+    const params = {
+        league: table.getAttribute('data-competition'),
+        year: table.getAttribute('data-year'),
+        group: item.getAttribute('data-group') || table.getAttribute('data-group'),
+        round: item.getAttribute('data-round'),
+        conference: item.getAttribute('data-conference') || '',
+        type: activeTab || 'tables',
+    };
+
+    $.ajax({
+        type: "POST",
+        url: "/ajax/getInfography",
+        data: params,
+        success: function(data){
+            data = JSON.parse(data);
+
+            const groupSuffix = data['group'] !== 0 ? '=' + data['group'] : '';
+            const sideSuffix = '&side='+activeTab;
+            const popupSuffix = 'popup' + groupSuffix + sideSuffix;
+
+            $('#infImage').attr('src', `data:image/png;base64,${data['image']['image']}`);
+            updateShareLinks(popupSuffix);
+
+            popup_close(); // Add this line to close the popup if needed
+
+            const popup = document.querySelector('.popup-infograph');
+            const body = document.body;
+            if (!popup) return false;
+            body.classList.add('protect');
+            popup.classList.remove('hidden');
+        },
+        error: function(data) {
+        }
+    });
+}
+
+function updateShareLinks(popupSuffix) {
+    const shareLinks = ['.share-link.facebook', '.share-link.twitter', '.share-link.whatsapp', '.share-link.clipboard'];
+
+    const regexLinks = {
+        '.share-link.facebook': new RegExp(/(popup[0-9]*)/gi),
+        '.share-link.twitter': new RegExp(/(popup[0-9]*)/gi),
+        '.share-link.whatsapp': new RegExp(/(popup[=]*[0-9]*)/gi),
+        '.share-link.clipboard': new RegExp(/(popup[=]*[0-9]*)/gi),
+    };
+
+    shareLinks.forEach(selector => {
+        const linkElement = document.querySelector(selector);
+        let nameAtt = selector === '.share-link.clipboard' ? 'data-href' : 'href';
+        if (linkElement) {
+            let href = linkElement.getAttribute(nameAtt);
+            if ( href.match(/&side/) && selector === '.share-link.clipboard' ) {
+                href = href.replace(/&side=(tables|home|away|predictions)/g, '');
+            }
+            linkElement.setAttribute(nameAtt, href.replace(regexLinks[selector], popupSuffix));
+        }
+    });
+
+}
